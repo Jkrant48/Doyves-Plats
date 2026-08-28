@@ -1,0 +1,158 @@
+/* medium screens (tablets) - max-width: 1024px */
+@media (max-width: 1024px) {
+  .menu-btn {
+    display: block;
+  }
+
+  .header-container {
+    padding: 1rem 4rem;
+    justify-content: space-between;
+  }
+
+  .header-container h1,
+  .footer-container h1 {
+    font-size: 1.5rem;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  .nav-links.open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 80px;
+    left: 0;
+    width: 100%;
+    background-color: var(--color-primary);
+    padding: 1rem 0;
+  }
+
+  .nav-links li {
+    text-align: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .nav-links li:last-child {
+    border-bottom: none;
+  }
+
+  a {
+    font-size: 1rem;
+  }
+
+  /* hero section responsive styles */
+  .hero {
+    height: 70vh;
+    padding-left: 10%;
+    margin-top: 90px;
+  }
+
+  .hero-content {
+    padding: 2rem;
+    max-width: 500px;
+  }
+
+  .hero-heading,
+  .hero-heading2 {
+    font-size: 2.5rem;
+  }
+
+  .hero-description {
+    font-size: 1rem;
+  }
+
+  /* about section responsive styles */
+  .about {
+    padding: 7% 10%;
+    gap: 2rem;
+  }
+
+  .about-title {
+    font-size: 2.5rem;
+  }
+
+  .about-title1 {
+    font-size: 3.5rem;
+  }
+
+  /* services section responsive styles */
+  .services {
+    padding: 7% 10%;
+  }
+
+  .section-title {
+    font-size: 2.5rem;
+  }
+
+  .section-title1 {
+    font-size: 3.5rem;
+  }
+
+  .services-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* reviews section responsive styles */
+  .review {
+    padding: 7% 10%;
+  }
+
+  .review-content {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* booking section responsive styles */
+  .booking {
+    padding: 7% 10%;
+  }
+
+  .booking-container {
+    display: block;
+  }
+
+  .booking-form {
+    grid-template-columns: 1fr;
+    margin-top: 2.5rem;
+  }
+
+  .booking-form .btn-primary,
+  .booking-form .form-info {
+    grid-column: auto;
+  }
+
+  /* contact section responsive styles */
+  .contact {
+    padding: 7% 10%;
+  }
+
+  .contact-info {
+    gap: 1rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  /* portfolio section responsive styles */
+  .portfolio {
+    padding: 10% 15%;
+  }
+
+  .portfolio-title {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .portfolio-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .portfolio-item img {
+    height: 200px;
+  }
+}
