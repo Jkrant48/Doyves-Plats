@@ -3,7 +3,11 @@ import HeroImage from "../assets/hero.jpg";
 
 const Hero = () => {
   return (
-    <section className="hero" style={{ backgroundImage: `url(${HeroImage})` }}>
+    <section
+      className="hero"
+      id="home"
+      style={{ backgroundImage: `url(${HeroImage})` }}
+    >
       <div className="hero-overlay"></div>
       <div className="hero-content">
         <p className="hero-subtitle">DOYVES PLATS - EST 2025</p>
@@ -13,7 +17,7 @@ const Hero = () => {
           Unique braids, transformative colors and designs crafted for you.
         </p>
         <div className="hero-buttons">
-          <a className="btn btn-primary" href="#book">
+          <a className="btn btn-primary" href="#booking">
             Book Now
           </a>
           <a className="btn btn-secondary" href="#portfolio">

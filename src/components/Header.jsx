@@ -1,5 +1,6 @@
 //component for the header
 import { useState } from "react";
+import LanguageSelector from "./language";
 
 function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -33,12 +34,12 @@ function Header() {
             </a>
           </li>
           <li>
-            <a href="#contact" onClick={closeMenu}>
+            <a href="#services" onClick={closeMenu}>
               Services
             </a>
           </li>
           <li>
-            <a href="#contact" onClick={closeMenu}>
+            <a href="#portfolio" onClick={closeMenu}>
               Portfolio
             </a>
           </li>
@@ -48,6 +49,7 @@ function Header() {
             </a>
           </li>
         </ul>
+        <LanguageSelector />
       </div>
     </header>
   );

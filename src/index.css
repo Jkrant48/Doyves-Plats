@@ -74,6 +74,37 @@ header {
   color: var(--color-text3);
 }
 
+/* google translate styles */
+#google_translate_element {
+  display: inline-block;
+}
+
+.language-selector {
+  margin-left: 1rem;
+}
+
+#google_translate_element .goog-te-gadget {
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+#google_translate_element .goog-te-combo {
+  max-width: 100%;
+  margin: 0.25rem 0;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-secondary);
+  border-radius: 5px;
+  background-color: var(--color-primary);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+#google_translate_element .goog-te-combo:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
 /* menu button */
 .menu-btn {
   display: none;
@@ -291,6 +322,13 @@ header {
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
   transition: transform 0.3s ease;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .service-item:hover {
@@ -318,6 +356,154 @@ header {
 .service-description {
   line-height: 1.5;
   padding: 0 1.25rem 1.5rem;
+}
+
+.service-item-prompt {
+  display: block;
+  padding: 0 1.25rem 1.25rem;
+  color: var(--color-text2);
+  font-weight: bold;
+}
+
+.service-item:focus-visible,
+.service-dialog-close:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 3px;
+}
+
+.service-status {
+  color: var(--color-text);
+}
+
+.service-dialog {
+  width: min(90vw, 620px);
+  max-height: 85dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--color-secondary);
+  border-radius: 16px;
+  background-color: var(--color-primary);
+  color: var(--color-text);
+  touch-action: pan-y;
+}
+
+.service-dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.72);
+}
+
+.service-dialog-content {
+  position: relative;
+  padding: 2.5rem;
+  overscroll-behavior: contain;
+}
+
+.service-dialog-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 1rem;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font-size: 2rem;
+  cursor: pointer;
+}
+
+.service-dialog-title {
+  margin: 0 2rem 1.5rem 0;
+  font-family: var(--font-heading);
+  font-size: 2rem;
+}
+
+.service-dialog-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.service-dialog-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr;
+  column-gap: 1.25rem;
+  min-height: 120px;
+  padding: 1.25rem 1.5rem 3.5rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background-color: var(--color-primary);
+  color: var(--color-text2);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.service-dialog-item:hover,
+.service-dialog-item:focus-within {
+  border-color: var(--color-secondary);
+}
+
+.service-dialog-item-name {
+  grid-column: 1;
+  grid-row: 1;
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  color: var(--color-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.service-dialog-item-description {
+  grid-column: 1;
+  grid-row: 2;
+  line-height: 1.5;
+}
+
+.service-dialog-item-price {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: start;
+  color: var(--color-secondary);
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.service-dialog-item-action {
+  position: absolute;
+  bottom: 1rem;
+  padding: 0.5rem 1.4rem;
+
+  color: var(--color-secondary);
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.service-dialog-item:hover .service-dialog-item-action,
+.service-dialog-item:focus-within .service-dialog-item-action {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.service-dialog-item-action:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+@media (hover: none) {
+  .service-dialog-item-action {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
 }
 
 /* reviews section styles */
@@ -426,23 +612,86 @@ header {
   letter-spacing: 1px;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 0.8rem;
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--color-secondary);
   border-radius: 7px;
-  background-color: transparent;
+  background-color: var(--color-primary);
   color: var(--color-text);
   font-family: var(--font-body);
 }
 
-.form-group input:focus {
+.form-group select {
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+.form-group select optgroup {
+  background-color: var(--color-primary);
+  color: var(--color-secondary);
+  font-weight: bold;
+}
+
+.form-group select option {
+  background-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.form-group input:focus,
+.form-group select:focus {
   outline: 1px solid var(--color-secondary);
   border-color: var(--color-secondary);
 }
 
+.booking-picker {
+  position: relative;
+}
+
+.booking-picker input {
+  padding-right: 3rem;
+}
+
+.booking-picker input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.booking-picker-button {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  display: grid;
+  place-items: center;
+  padding: 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-secondary);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.booking-picker-button:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
 .form-group input::placeholder {
   color: rgba(255, 255, 255, 0.6);
+}
+
+.booking-message {
+  grid-column: 1 / -1;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.booking-form .btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+  transform: none;
 }
 
 .booking-form .btn-primary,
@@ -529,6 +778,20 @@ header {
   line-height: 1.6;
 }
 
+.contact-item-description a {
+  color: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color 0.2s ease;
+}
+
+.contact-item-description a:hover,
+.contact-item-description a:focus-visible {
+  text-decoration-color: currentColor;
+}
+
 /* portfolio section styles */
 .portfolio {
   background-color: var(--color-accent);
@@ -601,8 +864,8 @@ footer {
   font-size: 1.25rem;
 
   background-color: rgba(240, 238, 238, 0.181);
-  padding: 0.5rem;
-  border-radius: 50%;
+  padding: 0.8rem;
+  border-radius: 45%;
   border: 1px solid var(--color-text);
 }
 

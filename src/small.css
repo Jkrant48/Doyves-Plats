@@ -202,3 +202,19 @@
     gap: 1rem;
   }
 }
+
+@media (max-width: 480px) {
+  .service-dialog-content {
+    padding: 2rem 1rem 1.25rem;
+  }
+
+  .service-dialog-item {
+    column-gap: 0.75rem;
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  .service-dialog-item-action {
+    right: 1rem;
+  }
+}

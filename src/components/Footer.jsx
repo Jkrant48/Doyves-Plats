@@ -19,20 +19,26 @@ function Footer() {
         <div className="social-icons">
           <a
             className="social-icon"
-            href="https://www.tiktok.com/@serdave_naturelle?_r=1&_t=ZS-97hoZZYrMvM"
+            href="https://www.tiktok.com/@doyvesplats_24?_r=1&_t=ZN-99KgMya1gLW"
           >
             <i className="fa-brands fa-tiktok"></i>
           </a>
 
-          <a className="social-icon" href="https://wa.me/+233204700813">
+          <a className="social-icon" href="https://wa.me/+358449458004">
             <i className="fa-brands fa-whatsapp"></i>
           </a>
 
           <a
             className="social-icon"
-            href="https://www.instagram.com/serdave_naturelle?igsh=MWp3MnNvY3UzdzVmeg=="
+            href="https://www.instagram.com/doyves_plats_?igsi=YWN0ejluMHhoYTE2&utm_source=qr"
           >
             <i className="fa-brands fa-instagram"></i>
+          </a>
+          <a
+            className="social-icon"
+            href="https://www.facebook.com/share/1Jv3rEUC9G/?mibextid=wwXIfr"
+          >
+            <i className="fa-brands fa-facebook"></i>
           </a>
         </div>
       </div>

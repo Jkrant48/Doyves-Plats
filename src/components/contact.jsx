@@ -16,13 +16,24 @@ function Contact() {
           <div className="contact-item">
             <h3 className="contact-item-title">ADDRESS</h3>
             <p className="contact-item-description">
-              123 Beauty Boulevard Suite 400, Downtown New York, NY 10001
+              <a
+                href="https://www.google.com/maps/search/?api=1&query=Wolffintie%2036%2C%20Vaasa%2C%20Finland"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Open Wolffintie 36 in Google Maps"
+              >
+                Wolffintie 36, Wasa Sport Club, Vaasa, Finland
+              </a>
             </p>
           </div>
           <div className="contact-item">
             <h3 className="contact-item-title">PHONE & MAIL</h3>
-            <p className="contact-item-description">(123) 456-7890</p>
-            <p className="contact-item-description">hello@beautysalon.com</p>
+            <p className="contact-item-description">
+              <a href="tel:+35849894587">+358 498 945 87</a>
+            </p>
+            <p className="contact-item-description">
+              <a href="mailto:hello@beautysalon.com">hello@beautysalon.com</a>
+            </p>
           </div>
           <div className="contact-item">
             <h3 className="contact-item-title">OPERATING HOURS</h3>

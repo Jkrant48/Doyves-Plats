@@ -1,4 +1,4 @@
-import React from "react";
+import { useState } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Hero from "./components/Hero";
@@ -10,16 +10,32 @@ import Booking from "./components/booking";
 import Contact from "./components/contact";
 
 function App() {
+  const [selectedServiceId, setSelectedServiceId] = useState("");
+
+  function selectServiceAndNavigate(serviceId) {
+    setSelectedServiceId(String(serviceId));
+    requestAnimationFrame(() => {
+      document.getElementById("booking")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      document.getElementById("serviceId")?.focus({ preventScroll: true });
+    });
+  }
+
   return (
     <>
       <Header />
       <Hero />
       <About />
-      <Services />
+      <Services onSelectService={selectServiceAndNavigate} />
       <Portfolio />
       <Review />
       <hr className="review-booking-divider" />
-      <Booking />
+      <Booking
+        selectedServiceId={selectedServiceId}
+        onServiceChange={setSelectedServiceId}
+      />
       <Contact />
       <Footer />
     </>
