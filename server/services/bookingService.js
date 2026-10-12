@@ -78,7 +78,7 @@ export async function findPaymentStatus(sessionId) {
   const { rows } = await pool.query(
     `
       SELECT CASE
-        WHEN appointment_status = 'confirmed' THEN 'paid'
+        WHEN appointment_status IN ('confirmed', 'completed', 'missed') THEN 'paid'
         WHEN appointment_status IN ('payment_failed', 'checkout_failed') THEN 'failed'
         WHEN appointment_status = 'payment_expired' THEN 'expired'
         ELSE 'pending'
@@ -87,6 +87,45 @@ export async function findPaymentStatus(sessionId) {
       WHERE stripe_checkout_session_id = $1
     `,
     [sessionId],
+  )
+
+  return rows[0] ?? null
+}
+
+export async function findAllAppointments() {
+  const { rows } = await pool.query(`
+    SELECT
+      appointments.appointments_id AS id,
+      appointments.customer_name AS "customerName",
+      appointments.customer_email AS "customerEmail",
+      appointments.customer_phone AS "customerPhone",
+      appointments.appointment_datetime AS "appointmentDateTime",
+      appointments.service_price AS "servicePrice",
+      appointments.deposit_amount AS "depositAmount",
+      appointments.appointment_status AS status,
+      services.service_name AS "serviceName",
+      category.category_name AS "categoryName"
+    FROM public.appointments AS appointments
+    LEFT JOIN public.services AS services
+      ON services.services_id = appointments.service_id
+    LEFT JOIN public.category AS category
+      ON category.category_id = services.category_id
+    ORDER BY appointments.appointment_datetime DESC, appointments.appointments_id DESC
+  `)
+
+  return rows
+}
+
+export async function setAppointmentOutcome(appointmentId, status) {
+  const { rows } = await pool.query(
+    `
+      UPDATE public.appointments
+      SET appointment_status = $2
+      WHERE appointments_id = $1
+        AND appointment_status IN ('confirmed', 'completed', 'missed')
+      RETURNING appointments_id AS id, appointment_status AS status
+    `,
+    [appointmentId, status],
   )
 
   return rows[0] ?? null

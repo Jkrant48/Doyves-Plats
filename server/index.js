@@ -3,6 +3,8 @@ import express from 'express'
 import { pool } from '../config/database.js'
 import bookingRoutes from './routes/bookingRoutes.js'
 import serviceRoutes from './routes/serviceRoutes.js'
+import portfolioRoutes from './routes/portfolioRoutes.js'
+import managementAuthRoutes from './routes/managementAuthRoutes.js'
 import { handleStripeWebhook } from './controllers/stripeWebhookController.js'
 
 const port = Number(process.env.PORT || 3001)
@@ -34,6 +36,8 @@ app.get('/api/health', async (_request, response) => {
 
 app.use('/api', serviceRoutes)
 app.use('/api', bookingRoutes)
+app.use('/api', portfolioRoutes)
+app.use('/api', managementAuthRoutes)
 
 app.use((_request, response) => {
   response.status(404).json({ error: 'Route not found.' })

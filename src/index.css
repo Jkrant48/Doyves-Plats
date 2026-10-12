@@ -840,6 +840,517 @@ header {
   display: block;
 }
 
+/* appointment management view */
+.management {
+  min-height: 100vh;
+  padding: clamp(2rem, 7vw, 6rem) 8%;
+  background-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.management-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.management-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.management-layout {
+  display: grid;
+  grid-template-columns: minmax(210px, 250px) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.management-sidebar {
+  position: sticky;
+  top: 1.5rem;
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(253, 224, 71, 0.4);
+  border-radius: 10px;
+  background-color: #101010;
+}
+
+.management-nav-button {
+  padding: 0.85rem 1rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.management-nav-button:hover,
+.management-nav-button.active {
+  background-color: var(--color-secondary);
+  color: var(--color-text2);
+}
+
+.management-nav-button:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+.management-content {
+  min-width: 0;
+  padding: 1.5rem;
+  border: 1px solid rgba(253, 224, 71, 0.4);
+  border-radius: 10px;
+  background-color: #101010;
+}
+
+.management-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.management-section-heading h2,
+.management-form-section h2 {
+  font-family: var(--font-heading);
+  font-size: 1.8rem;
+}
+
+.management-count {
+  white-space: nowrap;
+}
+
+.management-count strong {
+  color: var(--color-secondary);
+  font-size: 1.4rem;
+}
+
+.management-form-description {
+  margin-top: 0.4rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.5;
+}
+
+.management-data-form {
+  display: grid;
+  gap: 1rem;
+  max-width: 620px;
+  margin-top: 1.5rem;
+}
+
+.management-field {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+
+.management-field input,
+.management-field select,
+.management-field textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--color-secondary);
+  border-radius: 6px;
+  background-color: var(--color-primary);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.management-field textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.management-field input:focus-visible,
+.management-field select:focus-visible,
+.management-field textarea:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+.management-data-form .btn {
+  justify-self: start;
+}
+
+.management-form-hint {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.management-record-list {
+  margin-top: 2rem;
+}
+
+.management-record-list h3 {
+  margin-bottom: 0.75rem;
+  color: var(--color-secondary);
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+}
+
+.management-record-list ul {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+}
+
+.management-record {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(253, 224, 71, 0.3);
+  border-radius: 7px;
+}
+
+.management-record-details {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.management-record-details strong {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--color-text);
+}
+
+.management-record-details > span {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.management-record-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.4rem;
+}
+
+.management-icon-button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid var(--color-secondary);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-secondary);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.management-icon-button:hover {
+  background: var(--color-secondary);
+  color: var(--color-text2);
+}
+
+.management-delete-button {
+  border-color: #ff8a80;
+  color: #ff8a80;
+}
+
+.management-delete-button:hover {
+  background: #ff8a80;
+  color: var(--color-text2);
+}
+
+.management-icon-button:focus-visible,
+.management-appointment-actions button:focus-visible,
+.management-cancel-edit:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+.management-inactive-label {
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 138, 128, 0.15);
+  color: #ffb4ab;
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.management-appointment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.management-appointment-actions button,
+.management-cancel-edit {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-secondary);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-secondary);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.management-appointment-actions button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.management-cancel-edit {
+  justify-self: start;
+}
+
+.management-feedback,
+.management-notice {
+  margin-top: 1rem;
+}
+
+.management-notice {
+  color: var(--color-secondary);
+  line-height: 1.5;
+}
+
+.management-eyebrow {
+  margin-bottom: 0.75rem;
+  color: var(--color-secondary);
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+}
+
+.management-title {
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.management-description {
+  margin-top: 0.5rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.management-back-link,
+.management-sign-out {
+  color: var(--color-secondary);
+  font: inherit;
+}
+
+.management-back-link {
+  white-space: nowrap;
+}
+
+.management-access-form {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 440px);
+  padding: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.management-access-form label {
+  font-family: var(--font-body);
+}
+
+.management-access-form h2 {
+  margin: 0;
+}
+
+.management-access-form input,
+.management-access-form select {
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid var(--color-secondary);
+  border-radius: 7px;
+  background-color: var(--color-primary);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.management-password-field {
+  position: relative;
+}
+
+.management-password-field input {
+  padding-right: 3rem;
+}
+
+.management-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.65rem;
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  padding: 0.25rem;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.management-password-toggle svg {
+  width: 100%;
+  height: 100%;
+}
+
+.management-access-form input:focus-visible,
+.management-access-form select:focus-visible,
+.management-password-toggle:focus-visible,
+.management-auth-toggle:focus-visible,
+.management-sign-out:focus-visible,
+.management-back-link:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 3px;
+}
+
+.management-access-form .btn {
+  width: 100%;
+}
+
+.management-access-form .btn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.management-account-form {
+  margin-bottom: 1.5rem;
+}
+
+.management-auth-toggle {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-secondary);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.management-auth-toggle:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.management-error {
+  color: #ffb4ab;
+}
+
+.management-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.management-summary strong {
+  color: var(--color-secondary);
+  font-size: 1.5rem;
+}
+
+.management-sign-out {
+  padding: 0.5rem 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.management-create-account-button {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--color-secondary);
+  border-radius: 7px;
+  background: var(--color-secondary);
+  color: var(--color-primary);
+  cursor: pointer;
+  font: inherit;
+}
+
+.management-create-account-button:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 3px;
+}
+
+.management-empty {
+  padding: 1.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.management-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.management-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.management-table th,
+.management-table td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(253, 224, 71, 0.35);
+  vertical-align: top;
+}
+
+.management-table th {
+  color: var(--color-secondary);
+  font-family: var(--font-body);
+  font-weight: 700;
+}
+
+.management-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.management-table td a {
+  display: block;
+  color: var(--color-text);
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.management-category {
+  display: block;
+  margin-top: 0.3rem;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.85rem;
+}
+
+.management-status {
+  display: inline-block;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background-color: rgba(253, 224, 71, 0.15);
+  color: var(--color-secondary);
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.portfolio-status {
+  margin: -1rem 0 1.5rem;
+  color: #6b5b00;
+  line-height: 1.5;
+}
+
 /* footer styles */
 footer {
   background-color: var(--color-primary);

@@ -1,5 +1,126 @@
 /* small screens (mobile) - max-width: 768px */
 @media (max-width: 768px) {
+  /* appointment management mobile layout */
+  .management {
+    padding: 2rem 1rem;
+  }
+
+  .management-header {
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .management-header-actions {
+    flex-wrap: wrap;
+  }
+
+  .management-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .management-sidebar {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+  }
+
+  .management-nav-button {
+    padding: 0.7rem;
+    font-size: 0.95rem;
+  }
+
+  .management-content {
+    padding: 1rem;
+  }
+
+  .management-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .management-section-heading h2,
+  .management-form-section h2 {
+    font-size: 1.5rem;
+  }
+
+  .management-data-form .btn {
+    width: 100%;
+  }
+
+  .management-record {
+    align-items: flex-start;
+    padding: 0.7rem;
+  }
+
+  .management-record-details strong {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .management-icon-button {
+    width: 34px;
+    height: 34px;
+  }
+
+  .management-access-form {
+    padding: 1.25rem;
+  }
+
+  .management-table-wrap {
+    overflow: visible;
+    border: 0;
+  }
+
+  .management-table,
+  .management-table tbody,
+  .management-table tr,
+  .management-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .management-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .management-table tr {
+    margin-bottom: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+  }
+
+  .management-table td {
+    display: grid;
+    grid-template-columns: minmax(6.5rem, 0.65fr) minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 0.8rem;
+    border-bottom: 1px solid rgba(253, 224, 71, 0.25);
+    overflow-wrap: anywhere;
+  }
+
+  .management-table td::before {
+    content: attr(data-label);
+    color: var(--color-secondary);
+    font-family: var(--font-body);
+    font-weight: 700;
+  }
+
+  .management-table tbody tr:last-child td {
+    border-bottom: 1px solid rgba(253, 224, 71, 0.25);
+  }
+
+  .management-table tbody tr td:last-child {
+    border-bottom: 0;
+  }
+
   .menu-btn {
     display: block;
   }

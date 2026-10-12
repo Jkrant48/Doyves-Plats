@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Hero from "./components/Hero";
@@ -8,9 +8,22 @@ import Services from "./components/Services";
 import Review from "./components/Review";
 import Booking from "./components/booking";
 import Contact from "./components/contact";
+import Management from "./components/Management";
 
 function App() {
   const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [isManagementView, setIsManagementView] = useState(
+    () => window.location.hash === "#manage",
+  );
+
+  useEffect(() => {
+    function updateView() {
+      setIsManagementView(window.location.hash === "#manage");
+    }
+
+    window.addEventListener("hashchange", updateView);
+    return () => window.removeEventListener("hashchange", updateView);
+  }, []);
 
   function selectServiceAndNavigate(serviceId) {
     setSelectedServiceId(String(serviceId));
@@ -21,6 +34,10 @@ function App() {
       });
       document.getElementById("serviceId")?.focus({ preventScroll: true });
     });
+  }
+
+  if (isManagementView) {
+    return <Management />;
   }
 
   return (

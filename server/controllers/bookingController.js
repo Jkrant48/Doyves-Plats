@@ -1,8 +1,11 @@
+import process from 'node:process'
 import {
   createPendingBooking,
+  findAllAppointments,
   findPaymentStatus,
   markBookingCheckoutFailed,
   saveCheckoutSessionId,
+  setAppointmentOutcome,
 } from '../services/bookingService.js'
 import { getStripeClient } from '../services/stripeClient.js'
 
@@ -122,4 +125,33 @@ export async function getBookingPaymentStatus(request, response) {
   }
 
   return response.json(status)
+}
+
+export async function getManagedAppointments(_request, response) {
+  const appointments = await findAllAppointments()
+  return response.json({ appointments })
+}
+
+export async function updateAppointmentOutcome(request, response) {
+  const appointmentId = Number(request.params.appointmentId)
+  const { status } = request.body ?? {}
+
+  if (
+    !Number.isInteger(appointmentId) ||
+    appointmentId < 1 ||
+    !['completed', 'missed'].includes(status)
+  ) {
+    return response.status(400).json({
+      error: 'Provide a valid appointment ID and a status of completed or missed.',
+    })
+  }
+
+  const appointment = await setAppointmentOutcome(appointmentId, status)
+  if (!appointment) {
+    return response.status(409).json({
+      error: 'Only confirmed, completed, or missed appointments can be updated.',
+    })
+  }
+
+  return response.json({ appointment })
 }

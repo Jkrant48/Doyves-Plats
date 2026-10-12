@@ -1,5 +1,24 @@
 /* medium screens (tablets) - max-width: 1024px */
 @media (max-width: 1024px) {
+  /* appointment management tablet layout */
+  .management {
+    padding: 3rem 6%;
+  }
+
+  .management-layout {
+    grid-template-columns: 190px minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .management-content {
+    padding: 1.25rem;
+  }
+
+  .management-table th,
+  .management-table td {
+    padding: 0.8rem;
+  }
+
   .menu-btn {
     display: block;
   }

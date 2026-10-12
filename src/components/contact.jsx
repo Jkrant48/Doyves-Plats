@@ -32,7 +32,7 @@ function Contact() {
               <a href="tel:+35849894587">+358 498 945 87</a>
             </p>
             <p className="contact-item-description">
-              <a href="mailto:hello@beautysalon.com">hello@beautysalon.com</a>
+              <a href="mailto:doyvesplats@gmail.com">doyvesplats@gmail.com</a>
             </p>
           </div>
           <div className="contact-item">
