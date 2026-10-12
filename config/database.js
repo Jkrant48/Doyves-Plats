@@ -16,7 +16,9 @@ const isLocalDatabase = ['localhost', '127.0.0.1', '::1'].includes(
 
 export const pool = new Pool({
   connectionString,
-  ssl: isLocalDatabase ? false : { rejectUnauthorized: true },
+  // Render's internal PostgreSQL endpoint uses a self-signed certificate.
+  // Keep TLS enabled, but allow that platform certificate during verification.
+  ssl: isLocalDatabase ? false : { rejectUnauthorized: false },
   connectionTimeoutMillis: 10_000,
   keepAlive: true,
 })
