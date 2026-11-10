@@ -6,7 +6,7 @@ organized into routes, controllers, and database service modules under `server/`
 ## Getting started
 
 1. Install dependencies with `npm install`.
-2. Copy `.env.example` to `.env` and set `DATABASE_URL`, `STRIPE_SECRET_KEY`,
+2. Copy `.env.example` to `.env` and set `SUPABASE_DB_URL`, `STRIPE_SECRET_KEY`,
    `STRIPE_WEBHOOK_SECRET`, `FRONTEND_URL`, a private `ADMIN_API_KEY`, and a
    private `MANAGEMENT_SESSION_SECRET`; both secrets should contain at least
    32 random bytes. The admin key is used only to create the first management
@@ -14,10 +14,19 @@ organized into routes, controllers, and database service modules under `server/`
    Generate a fresh key with Node.js using
    `node -p "require('node:crypto').randomBytes(32).toString('hex')"` twice,
    once for each secret, and keep both values only in your local `.env` file.
-3. Create the PostgreSQL database named `doyves_plats` (or change the database name in `DATABASE_URL`).
-4. Run `npm run db:setup` to create the `users`, `category`, `services`, `appointments`, and `portfolio_images` tables if needed, and add the `Admin` and `Employee` account roles. Existing `Management` accounts are migrated to `Admin`. Setup does not add users, categories, or services. With an empty `users` table, visit `/#manage` and use the one-time setup option with `ADMIN_API_KEY` to create the first Admin account; that Admin can create Employee accounts and add categories or services later.
+3. Use the Supabase project's PostgreSQL connection string for `SUPABASE_DB_URL`. `DATABASE_URL` remains supported as a fallback for local PostgreSQL.
+4. Run `npm run db:setup` to create or migrate the `users`, `category`, `services`, `appointments`, `portfolio_images`, and `reviews` tables, and add the `Admin` and `Employee` account roles. Rerun it after schema updates so existing databases receive migrations such as the review-to-appointment link. Existing `Management` accounts are migrated to `Admin`. Setup does not add users, categories, or services. With an empty `users` table, visit `/#manage` and use the one-time setup option with `ADMIN_API_KEY` to create the first Admin account; that Admin can create Employee accounts and add categories or services later.
+   If only the review-to-appointment link is missing, run `npm run db:migrate:reviews` to apply that migration without changing other tables.
 5. In one terminal, run `npm run dev:server` to start the API on port 3001.
 6. In another terminal, run `npm run dev` to start the Vite frontend. Requests to `/api` are proxied to the API.
+
+For portfolio photo uploads, configure `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_STORAGE_BUCKET` in the server's
+environment. Create the named Supabase Storage bucket and make it public so
+portfolio images can be displayed to site visitors. Keep the service-role key
+server-only; do not add it to frontend variables or source control. The API
+uses `SUPABASE_DB_URL` for PostgreSQL queries (or `DATABASE_URL` if the Supabase
+variable is not set), including bookings and reviews.
 
 The API expects `public.category(category_id, category_name)` and
 `public.services(services_id, service_name, service_description, service_price,
@@ -53,12 +62,20 @@ while preserving its appointment history. Categories with services cannot be
 deleted. Appointments can be marked completed or missed after payment
 confirmation. `GET /api/portfolio` supplies database image URLs to the public
 portfolio section, which continues to show the client-side sample gallery.
+Each uploaded portfolio image stores its title, description, alternative text,
+Storage path, and required service link in `public.portfolio_images`; the
+displayed category is derived from that service's category. Existing portfolio
+rows must be assigned a valid `services_id` before applying the schema's
+required-service migration. Add the column and set each row to its correct
+service in Supabase SQL Editor, then rerun `database/schema.sql`; do not assign
+an arbitrary service just to satisfy the constraint.
 
 The API exposes `GET /api/health` for database connectivity, `GET /api/categories`
 for service categories, `GET /api/categories/:categoryId/services` for category
 details, `GET /api/services` for bookable services, and `POST /api/bookings` to
 create a pending booking and Stripe Checkout session. The appointment is confirmed
-only after the signed `POST /api/stripe/webhook` event reports successful payment.
+after a valid signed `POST /api/stripe/webhook` event or when the payment-status
+endpoint independently verifies the Checkout session with Stripe.
 The form redirects customers to pay a fixed €10.00 deposit through Stripe-hosted
 Checkout. Configure the Stripe webhook endpoint URL as
 `https://<your-api-host>/api/stripe/webhook` and subscribe to
@@ -67,11 +84,17 @@ Checkout. Configure the Stripe webhook endpoint URL as
 `FRONTEND_URL` must be the browser-accessible site origin (for local development,
 `http://localhost:5173`). The publishable key is not needed for this hosted
 Checkout redirect; the secret key stays on the API server.
+After a successful payment confirmation, the customer is shown an appointment
+summary with the appointment number, service, date and time, and payment status.
 
 Clicking a category on the services section opens its database-backed services in
 a dialog. The booking form loads its service options from the database and adds
-each new appointment as `pending_payment` in `public.appointments` until Stripe's
-verified webhook confirms it.
+each new appointment as `pending_payment` in `public.appointments` until Stripe
+confirms payment through the verified webhook or the payment-status check.
+
+Customers can submit a review using their appointment number and booking email
+after payment confirms the appointment. Reviews remain unpublished until an
+Admin approves them in the management view.
 
 Set `PORT` in `.env` to change the API port; if you do, update the proxy target
 in `vite.config.js` to match.

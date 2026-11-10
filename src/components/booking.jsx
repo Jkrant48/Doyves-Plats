@@ -9,20 +9,32 @@ function getLocalDate() {
 
 function Booking({ selectedServiceId, onServiceChange }) {
   const [services, setServices] = useState([]);
-  const [servicesError, setServicesError] = useState("");
+  const [loadingServices, setLoadingServices] = useState(true);
   const [bookingMessage, setBookingMessage] = useState(() => {
     const query = new URLSearchParams(window.location.search);
-    if (query.get("checkout") === "cancelled") {
-      return "Payment was cancelled. Your appointment has not been booked.";
-    }
     if (query.get("checkout") === "success" && query.has("session_id")) {
       return "Payment received. Confirming your appointment...";
     }
     return "";
   });
   const [submitting, setSubmitting] = useState(false);
+  const [appointmentConfirmation, setAppointmentConfirmation] = useState(null);
   const dateInputRef = useRef(null);
   const timeInputRef = useRef(null);
+  const confirmationDialogRef = useRef(null);
+  const checkoutReturnRef = useRef(null);
+  if (checkoutReturnRef.current === null) {
+    const query = new URLSearchParams(window.location.search);
+    checkoutReturnRef.current = {
+      result: query.get("checkout"),
+      sessionId: query.get("session_id"),
+    };
+  }
+
+  useEffect(() => {
+    const dialog = confirmationDialogRef.current;
+    if (appointmentConfirmation && dialog && !dialog.open) dialog.showModal();
+  }, [appointmentConfirmation]);
 
   function openPicker(inputRef) {
     const input = inputRef.current;
@@ -42,17 +54,17 @@ function Booking({ selectedServiceId, onServiceChange }) {
       .then((response) => readApiJson(response, "Unable to load services."))
       .then((data) => data.services)
       .then(setServices)
-      .catch((error) => setServicesError(error.message));
+      .catch((error) => console.error("Unable to load services.", error))
+      .finally(() => setLoadingServices(false));
   }, []);
 
   // Stripe returns here after checkout; the webhook remains the source of truth.
   useEffect(() => {
-    const query = new URLSearchParams(window.location.search);
-    const checkoutResult = query.get("checkout");
-    const sessionId = query.get("session_id");
+    const { result: checkoutResult, sessionId } = checkoutReturnRef.current;
 
     if (checkoutResult === "cancelled") {
       window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
+      console.warn("Stripe Checkout was cancelled.");
       return;
     }
 
@@ -72,26 +84,28 @@ function Booking({ selectedServiceId, onServiceChange }) {
         if (!active) return;
 
         if (data.paymentStatus === "paid") {
-          setBookingMessage("Payment confirmed. Your appointment is booked.");
+          setBookingMessage("");
+          setAppointmentConfirmation(data);
           return;
         }
         if (data.paymentStatus === "failed" || data.paymentStatus === "expired") {
-          setBookingMessage("Payment was not completed. Your appointment has not been booked.");
+          console.error("The booking payment was not completed.", data.paymentStatus);
+          setBookingMessage("");
           return;
         }
 
         attempts += 1;
         if (attempts >= 15) {
-          setBookingMessage(
-            "Your payment is still being confirmed. Your appointment is not booked until confirmation completes.",
-          );
+          console.warn("Booking payment confirmation is still pending.");
+          setBookingMessage("");
           return;
         }
 
         timeoutId = window.setTimeout(checkPaymentStatus, 2000);
       } catch (error) {
         if (active) {
-          setBookingMessage(`Unable to verify your payment: ${error.message}`);
+          console.error("Unable to verify your payment.", error);
+          setBookingMessage("");
         }
       }
     }
@@ -130,7 +144,8 @@ function Booking({ selectedServiceId, onServiceChange }) {
       // Redirect to Stripe-hosted Checkout; the webhook confirms the appointment.
       window.location.assign(data.checkoutUrl);
     } catch (error) {
-      setBookingMessage(error.message);
+      console.error("Unable to submit your booking.", error);
+      setBookingMessage("");
     } finally {
       setSubmitting(false);
     }
@@ -190,10 +205,10 @@ function Booking({ selectedServiceId, onServiceChange }) {
               value={selectedServiceId}
               onChange={(event) => onServiceChange(event.target.value)}
               required
-              disabled={services.length === 0 || Boolean(servicesError)}
+              disabled={services.length === 0}
             >
               <option value="" disabled>
-                {servicesError ? "Services unavailable" : "Select a service"}
+                Select a service
               </option>
               {[...new Set(services.map((service) => service.categoryName))].map(
                 (categoryName) => (
@@ -278,12 +293,7 @@ function Booking({ selectedServiceId, onServiceChange }) {
               </button>
             </div>
           </div>
-          {servicesError && (
-            <p className="booking-message" role="alert">
-              {servicesError}
-            </p>
-          )}
-          {!servicesError && services.length === 0 && (
+          {loadingServices && (
             <p className="booking-message" role="status">
               Loading available services...
             </p>
@@ -305,6 +315,81 @@ function Booking({ selectedServiceId, onServiceChange }) {
           </p>
         </form>
       </div>
+      <dialog
+        className="appointment-confirmation-dialog"
+        ref={confirmationDialogRef}
+        aria-labelledby="appointment-confirmation-title"
+        onClose={() => setAppointmentConfirmation(null)}
+      >
+        {appointmentConfirmation && (
+          <div className="appointment-confirmation">
+            <button
+              className="service-dialog-close"
+              type="button"
+              aria-label="Close appointment confirmation"
+              onClick={() => confirmationDialogRef.current?.close()}
+            >
+              &times;
+            </button>
+            <p className="booking-subtitle">BOOKING CONFIRMED</p>
+            <h2 id="appointment-confirmation-title">Thank you for your booking</h2>
+            <p className="appointment-confirmation-number">
+              Appointment number: <strong>#{appointmentConfirmation.appointmentId}</strong>
+            </p>
+            <dl className="appointment-confirmation-summary">
+              <div>
+                <dt>Service</dt>
+                <dd>
+                  {appointmentConfirmation.serviceName || "Appointment"}
+                  {appointmentConfirmation.categoryName
+                    ? ` (${appointmentConfirmation.categoryName})`
+                    : ""}
+                </dd>
+              </div>
+              <div>
+                <dt>Date and time</dt>
+                <dd>
+                  {new Date(
+                    appointmentConfirmation.appointmentDateTime,
+                  ).toLocaleString()}
+                </dd>
+              </div>
+              <div>
+                <dt>Service price</dt>
+                <dd>
+                  €{Number(appointmentConfirmation.servicePrice).toFixed(2)}
+                </dd>
+              </div>
+              <div>
+                <dt>Deposit paid</dt>
+                <dd>
+                  €{Number(appointmentConfirmation.depositAmount).toFixed(2)}
+                </dd>
+              </div>
+              <div>
+                <dt>Payment status</dt>
+                <dd>Paid</dd>
+              </div>
+              <div>
+                <dt>Appointment status</dt>
+                <dd>
+                  {appointmentConfirmation.appointmentStatus.replaceAll("_", " ")}
+                </dd>
+              </div>
+            </dl>
+            <p className="appointment-confirmation-review">
+              Keep your appointment number to leave a review after your visit.
+            </p>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={() => confirmationDialogRef.current?.close()}
+            >
+              Done
+            </button>
+          </div>
+        )}
+      </dialog>
     </section>
   );
 }

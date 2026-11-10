@@ -12,9 +12,15 @@ const categoryImages = {
   lashes: D11,
 };
 
+const lashCategoryDetails = {
+  image: D10,
+  description:
+    "Enhance your natural beauty with expertly applied lash extensions for a fuller, longer, and elegant look.",
+};
+
 const categoryDetails = {
-  "pedicure & manicure": {
-    image: D10,
+  nails: {
+    image: D11,
     description:
       "Refresh your hands and feet with professional nail care, shaping, cuticle treatment, and a polished finish.",
   },
@@ -28,11 +34,8 @@ const categoryDetails = {
     description:
       "Enjoy smooth, long-lasting results with gentle waxing services for clean and confident skin.",
   },
-  lashes: {
-    image: D11,
-    description:
-      "Enhance your natural beauty with expertly applied lash extensions for a fuller, longer, and elegant look.",
-  },
+  lashes: lashCategoryDetails,
+  "lash extensions": lashCategoryDetails,
 };
 
 async function fetchJson(url) {
@@ -42,11 +45,11 @@ async function fetchJson(url) {
 
 function Services({ onSelectService }) {
   const [categories, setCategories] = useState([]);
-  const [categoriesError, setCategoriesError] = useState("");
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categoryServices, setCategoryServices] = useState([]);
-  const [modalError, setModalError] = useState("");
+  const [categoryLoadFailed, setCategoryLoadFailed] = useState(false);
+  const [servicesLoadFailed, setServicesLoadFailed] = useState(false);
   const [loadingCategory, setLoadingCategory] = useState(false);
   const dialogRef = useRef(null);
   const closeButtonRef = useRef(null);
@@ -56,7 +59,10 @@ function Services({ onSelectService }) {
       .then(({ categories: loadedCategories }) =>
         setCategories(loadedCategories),
       )
-      .catch((error) => setCategoriesError(error.message))
+      .catch((error) => {
+        console.error("Unable to load service categories.", error);
+        setCategoryLoadFailed(true);
+      })
       .finally(() => setLoadingCategories(false));
   }, []);
 
@@ -74,7 +80,10 @@ function Services({ onSelectService }) {
 
     fetchJson(`/api/categories/${selectedCategory.id}/services`)
       .then(({ services }) => setCategoryServices(services))
-      .catch((error) => setModalError(error.message))
+      .catch((error) => {
+        console.error("Unable to load category services.", error);
+        setServicesLoadFailed(true);
+      })
       .finally(() => setLoadingCategory(false));
 
     return () => {
@@ -91,7 +100,7 @@ function Services({ onSelectService }) {
 
   function openCategory(category) {
     setCategoryServices([]);
-    setModalError("");
+    setServicesLoadFailed(false);
     setLoadingCategory(true);
     setSelectedCategory(category);
   }
@@ -107,21 +116,18 @@ function Services({ onSelectService }) {
         <p className="services-subtitle">What We Offer</p>
         <h3 className="section-title">Services Crafted</h3>
         <h3 className="section-title1">To Meet Your Needs</h3>
-        {categoriesError && (
-          <p className="service-status" role="alert">
-            {categoriesError}
-          </p>
-        )}
         {loadingCategories && (
           <p className="service-status" role="status">
             Loading service categories...
           </p>
         )}
-        {!loadingCategories && !categoriesError && categories.length === 0 && (
-          <p className="service-status" role="status">
-            No service categories are currently available.
-          </p>
-        )}
+        {!loadingCategories &&
+          !categoryLoadFailed &&
+          categories.length === 0 && (
+            <p className="service-status" role="status">
+              No service categories are currently available.
+            </p>
+          )}
         {categories.length > 0 && (
           <div className="services-grid">
             {categories.map((category) => (
@@ -177,9 +183,8 @@ function Services({ onSelectService }) {
               {selectedCategory.name}
             </h2>
             {loadingCategory && <p role="status">Loading services...</p>}
-            {modalError && <p role="alert">{modalError}</p>}
             {!loadingCategory &&
-              !modalError &&
+              !servicesLoadFailed &&
               categoryServices.length === 0 && (
                 <p>No services are currently available in this category.</p>
               )}

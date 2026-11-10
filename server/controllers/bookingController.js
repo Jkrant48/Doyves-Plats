@@ -6,6 +6,7 @@ import {
   markBookingCheckoutFailed,
   saveCheckoutSessionId,
   setAppointmentOutcome,
+  updateBookingPaymentStatus,
 } from '../services/bookingService.js'
 import { getStripeClient } from '../services/stripeClient.js'
 
@@ -119,9 +120,49 @@ export async function getBookingPaymentStatus(request, response) {
     return response.status(400).json({ error: 'A valid Checkout session ID is required.' })
   }
 
-  const status = await findPaymentStatus(sessionId)
+  let status = await findPaymentStatus(sessionId)
   if (!status) {
     return response.status(404).json({ error: 'Checkout session not found.' })
+  }
+
+  if (status.paymentStatus !== 'paid') {
+    const stripeSession = await getStripeClient().checkout.sessions.retrieve(sessionId)
+    const sessionBookingId = Number(stripeSession.metadata?.bookingId)
+    if (
+      stripeSession.id !== sessionId ||
+      sessionBookingId !== status.appointmentId
+    ) {
+      return response.status(404).json({ error: 'Checkout session not found.' })
+    }
+
+    let nextStatus = null
+    if (stripeSession.payment_status === 'paid') {
+      if (stripeSession.amount_total !== paymentAmountCents || stripeSession.currency !== 'eur') {
+        console.error(
+          `Stripe reported an unexpected amount or currency for booking ${status.appointmentId}.`,
+        )
+        return response.status(409).json({
+          error: 'The payment does not match the booking deposit.',
+        })
+      }
+      nextStatus = 'confirmed'
+    } else if (stripeSession.status === 'expired') {
+      nextStatus = 'payment_expired'
+    }
+
+    if (nextStatus) {
+      const updatedBooking = await updateBookingPaymentStatus(
+        status.appointmentId,
+        sessionId,
+        nextStatus,
+      )
+      if (!updatedBooking) {
+        throw new Error(
+          `No booking matches Stripe Checkout session ${sessionId}.`,
+        )
+      }
+      status = await findPaymentStatus(sessionId)
+    }
   }
 
   return response.json(status)

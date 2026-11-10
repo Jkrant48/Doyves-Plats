@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { readApiJson } from "../utils/api.js";
 
 const sections = [
@@ -6,6 +6,7 @@ const sections = [
   { id: "category", label: "Add New Category" },
   { id: "service", label: "Add New Service" },
   { id: "portfolio", label: "Add Image to Portfolio" },
+  { id: "reviews", label: "Approve Reviews" },
 ];
 
 function formatDateTime(value) {
@@ -15,6 +16,16 @@ function formatDateTime(value) {
 
 function formatStatus(value) {
   return value.replaceAll("_", " ");
+}
+
+function focusManagementForm(formRef) {
+  requestAnimationFrame(() => {
+    const form = formRef.current;
+    if (!form) return;
+
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+    form.querySelector("input, select, textarea")?.focus({ preventScroll: true });
+  });
 }
 
 function Management() {
@@ -36,11 +47,15 @@ function Management() {
   const [categories, setCategories] = useState([]);
   const [services, setServices] = useState([]);
   const [portfolioImages, setPortfolioImages] = useState([]);
+  const [pendingReviews, setPendingReviews] = useState([]);
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingService, setEditingService] = useState(null);
   const [editingImage, setEditingImage] = useState(null);
+  const categoryFormRef = useRef(null);
+  const serviceFormRef = useRef(null);
   const [selectedSection, setSelectedSection] = useState("appointments");
-  const [error, setError] = useState("");
+  const [, setError] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -57,7 +72,7 @@ function Management() {
         );
         if (isCurrent) setRegistrationAvailable(data.registrationAvailable);
       } catch (requestError) {
-        if (isCurrent) setError(requestError.message);
+        console.error("Unable to check management account setup.", requestError);
       } finally {
         if (isCurrent) setCheckingRegistration(false);
       }
@@ -72,7 +87,9 @@ function Management() {
   async function managementRequest(url, options = {}) {
     const headers = new Headers(options.headers);
     headers.set("Authorization", `Bearer ${credential}`);
-    if (options.body) headers.set("Content-Type", "application/json");
+    if (typeof options.body === "string") {
+      headers.set("Content-Type", "application/json");
+    }
     const response = await fetch(url, { ...options, headers });
     return readApiJson(response, "Unable to complete the management request.");
   }
@@ -83,9 +100,46 @@ function Management() {
     setIsAuthenticated(true);
   }
 
+  useEffect(() => {
+    if (
+      !isAuthenticated ||
+      selectedSection !== "appointments" ||
+      !credential
+    ) {
+      return undefined;
+    }
+
+    let active = true;
+    async function refreshAppointments() {
+      try {
+        const response = await fetch("/api/management/appointments", {
+          headers: { Authorization: `Bearer ${credential}` },
+        });
+        const data = await readApiJson(
+          response,
+          "Unable to refresh management appointments.",
+        );
+        if (active) setAppointments(data.appointments);
+      } catch (requestError) {
+        if (active) {
+          console.error("Unable to refresh management appointments.", requestError);
+        }
+      }
+    }
+
+    const intervalId = window.setInterval(refreshAppointments, 10000);
+    window.addEventListener("focus", refreshAppointments);
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshAppointments);
+    };
+  }, [credential, isAuthenticated, selectedSection]);
+
   async function handleLogin(event) {
     event.preventDefault();
     setError("");
+    setAuthMessage("");
     setLoading(true);
 
     try {
@@ -125,13 +179,20 @@ function Management() {
       setAppointments(appointmentData.appointments);
       setIsAuthenticated(true);
     } catch (requestError) {
+      if (
+        !isRegistering &&
+        requestError.message === "Invalid email or password."
+      ) {
+        setAuthMessage("Wrong email or password. Please try again.");
+      } else {
+        console.error("Unable to sign in to management.", requestError);
+      }
       setAppointments([]);
       setCredential("");
       setIsAuthenticated(false);
       setIsCreatingAccount(false);
       setNewAccountEmail("");
       setNewAccountPassword("");
-      setError(requestError.message);
     } finally {
       setLoading(false);
     }
@@ -158,7 +219,7 @@ function Management() {
       setIsCreatingAccount(false);
       setNotice(`${data.user.role} account created for ${data.user.email}.`);
     } catch (requestError) {
-      setError(requestError.message);
+      console.error("Unable to create the management account.", requestError);
     } finally {
       setLoading(false);
     }
@@ -174,7 +235,7 @@ function Management() {
       try {
         await loadAppointments();
       } catch (requestError) {
-        setError(requestError.message);
+        console.error("Unable to load management appointments.", requestError);
       } finally {
         setLoading(false);
       }
@@ -190,7 +251,7 @@ function Management() {
         setCategories(categoryData.categories);
         setServices(serviceData.services);
       } catch (requestError) {
-        setError(requestError.message);
+        console.error("Unable to load management services.", requestError);
       } finally {
         setLoading(false);
       }
@@ -199,13 +260,49 @@ function Management() {
     if (section === "portfolio") {
       setLoading(true);
       try {
-        const data = await managementRequest("/api/portfolio");
-        setPortfolioImages(data.images);
+        const [portfolioData, serviceData] = await Promise.all([
+          managementRequest("/api/portfolio"),
+          managementRequest("/api/management/services"),
+        ]);
+        setPortfolioImages(portfolioData.images);
+        setServices(serviceData.services);
       } catch (requestError) {
-        setError(requestError.message);
+        console.error("Unable to load portfolio images.", requestError);
       } finally {
         setLoading(false);
       }
+    }
+
+    if (section === "reviews") {
+      setLoading(true);
+      try {
+        const data = await managementRequest("/api/management/reviews");
+        setPendingReviews(data.reviews);
+      } catch (requestError) {
+        console.error("Unable to load pending reviews.", requestError);
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  async function approveCustomerReview(review) {
+    setError("");
+    setNotice("");
+    setLoading(true);
+    try {
+      await managementRequest(
+        `/api/management/reviews/${review.id}/approve`,
+        { method: "PATCH" },
+      );
+      setPendingReviews((existing) =>
+        existing.filter((item) => item.id !== review.id),
+      );
+      setNotice(`Review from ${review.author} is now published.`);
+    } catch (requestError) {
+      console.error("Unable to approve review.", requestError);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -239,7 +336,7 @@ function Management() {
         `Category “${data.category.name}” was ${editingCategory ? "updated" : "added"}.`,
       );
     } catch (requestError) {
-      setError(requestError.message);
+      console.error("Unable to save category.", requestError);
     } finally {
       setLoading(false);
     }
@@ -278,7 +375,7 @@ function Management() {
         `Service “${data.service.name}” was ${editingService ? "updated" : "added"}.`,
       );
     } catch (requestError) {
-      setError(requestError.message);
+      console.error("Unable to save service.", requestError);
     } finally {
       setLoading(false);
     }
@@ -293,17 +390,28 @@ function Management() {
 
     try {
       const formData = new FormData(form);
-      const data = await managementRequest(
-        editingImage
-          ? `/api/management/portfolio/${editingImage.id}`
-          : "/api/management/portfolio",
-        {
-        method: editingImage ? "PATCH" : "POST",
-        body: JSON.stringify({
-          imageUrl: formData.get("imageUrl"),
-          altText: formData.get("altText"),
-        }),
+      const file = formData.get("image");
+      const metadata = new URLSearchParams({
+        title: formData.get("title"),
+        description: formData.get("description"),
+        altText: formData.get("altText"),
+        serviceId: formData.get("serviceId"),
       });
+      if (!(file instanceof File) || file.size === 0) {
+        throw new Error("Select an image to upload.");
+      }
+
+      const url = editingImage
+        ? `/api/management/portfolio/${editingImage.id}`
+        : "/api/management/portfolio";
+      const data = await managementRequest(
+        `${url}?${metadata}`,
+        {
+          method: editingImage ? "PATCH" : "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        },
+      );
       const refreshed = await managementRequest("/api/portfolio");
       setPortfolioImages(refreshed.images);
       form.reset();
@@ -312,7 +420,8 @@ function Management() {
         `Image “${data.image.altText || "Portfolio image"}” was ${editingImage ? "updated" : "added"}.`,
       );
     } catch (requestError) {
-      setError(requestError.message);
+      console.error("Unable to save portfolio image.", requestError);
+      window.alert("Image failed to upload.");
     } finally {
       setLoading(false);
     }
@@ -334,7 +443,7 @@ function Management() {
       onDelete();
       setNotice(`“${label}” was deleted.`);
     } catch (requestError) {
-      setError(requestError.message);
+      console.error("Unable to delete record.", requestError);
     } finally {
       setLoading(false);
     }
@@ -358,7 +467,7 @@ function Management() {
       );
       setNotice(`Appointment #${appointment.id} marked ${status}.`);
     } catch (requestError) {
-      setError(requestError.message);
+      console.error("Unable to update appointment.", requestError);
     } finally {
       setLoading(false);
     }
@@ -436,7 +545,10 @@ function Management() {
             autoComplete="username"
             maxLength={255}
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              setAuthMessage("");
+            }}
             required
           />
           <PasswordField
@@ -446,13 +558,21 @@ function Management() {
             minLength={isRegistering ? 12 : undefined}
             maxLength={128}
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              setAuthMessage("");
+            }}
             visible={showPassword}
             onToggleVisibility={() =>
               setShowPassword((current) => !current)
             }
             required
           />
+          {authMessage && (
+            <p className="management-error" role="alert">
+              {authMessage}
+            </p>
+          )}
           {isRegistering && (
             <>
               <label htmlFor="management-bootstrap-key">
@@ -471,11 +591,6 @@ function Management() {
                 only until the first management account is created.
               </p>
             </>
-          )}
-          {error && (
-            <p className="management-error" role="alert">
-              {error}
-            </p>
           )}
           <button
             className="btn btn-primary"
@@ -497,6 +612,7 @@ function Management() {
               disabled={loading || checkingRegistration}
               onClick={() => {
                 setIsRegistering((current) => !current);
+                setAuthMessage("");
                 setError("");
               }}
             >
@@ -547,11 +663,6 @@ function Management() {
                 <option value="Admin">Admin</option>
                 <option value="Employee">Employee</option>
               </select>
-              {error && (
-                <p className="management-error" role="alert">
-                  {error}
-                </p>
-              )}
               <button
                 className="btn btn-primary"
                 type="submit"
@@ -614,7 +725,8 @@ function Management() {
                           <th scope="col">Appointment</th>
                           <th scope="col">Price</th>
                           <th scope="col">Deposit</th>
-                          <th scope="col">Status</th>
+                          <th scope="col">Appointment status</th>
+                          <th scope="col">Payment</th>
                           {userRole === "Admin" && (
                             <th scope="col">Actions</th>
                           )}
@@ -659,6 +771,13 @@ function Management() {
                                 {formatStatus(appointment.status)}
                               </span>
                             </td>
+                            <td data-label="Payment">
+                              <span
+                                className={`management-status management-status-${appointment.paymentStatus}`}
+                              >
+                                {formatStatus(appointment.paymentStatus)}
+                              </span>
+                            </td>
                             {userRole === "Admin" && (
                             <td data-label="Actions">
                               {["confirmed", "completed", "missed"].includes(
@@ -696,10 +815,52 @@ function Management() {
               </>
             )}
 
+            {selectedSection === "reviews" && (
+              <section className="management-form-section">
+                <p className="management-eyebrow">CUSTOMER FEEDBACK</p>
+                <h2>Reviews awaiting approval</h2>
+                {loading ? (
+                  <p className="management-empty" role="status">
+                    Loading reviews...
+                  </p>
+                ) : pendingReviews.length === 0 ? (
+                  <p className="management-empty" role="status">
+                    There are no reviews awaiting approval.
+                  </p>
+                ) : (
+                  <div className="management-record-list">
+                    <ul>
+                      {pendingReviews.map((review) => (
+                        <li className="management-record" key={review.id}>
+                          <div className="management-record-details">
+                            <strong>
+                              {review.author} · {"★".repeat(review.rating)}
+                              {"☆".repeat(5 - review.rating)}
+                            </strong>
+                            <span>Appointment #{review.appointmentId}</span>
+                            <span>{review.reviewText}</span>
+                          </div>
+                          <button
+                            className="btn btn-primary"
+                            type="button"
+                            disabled={loading}
+                            onClick={() => approveCustomerReview(review)}
+                          >
+                            Approve
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </section>
+            )}
+
             {selectedSection === "category" && (
               <>
                 <ManagementFormSection
                   key={editingCategory?.id ?? "new-category"}
+                  formRef={categoryFormRef}
                   eyebrow="SERVICES"
                   title={editingCategory ? "Edit category" : "Add new category"}
                   description="Create a category to organize bookable services."
@@ -730,7 +891,10 @@ function Management() {
                   items={categories.map((category) => ({
                     id: category.id,
                     title: category.name,
-                    onEdit: () => setEditingCategory(category),
+                    onEdit: () => {
+                      setEditingCategory(category);
+                      focusManagementForm(categoryFormRef);
+                    },
                     onDelete: () =>
                       deleteRecord(
                         `/api/categories/${category.id}`,
@@ -753,6 +917,7 @@ function Management() {
               <>
                 <ManagementFormSection
                   key={editingService?.id ?? "new-service"}
+                  formRef={serviceFormRef}
                   eyebrow="SERVICES"
                   title={editingService ? "Edit service" : "Add new service"}
                   description="Add a bookable service to an existing category."
@@ -841,7 +1006,10 @@ function Management() {
                     title: service.name,
                     detail: `${service.categoryName} · €${Number(service.price).toFixed(2)} · ${service.durationMinutes} min`,
                     inactive: !service.isActive,
-                    onEdit: () => setEditingService(service),
+                    onEdit: () => {
+                      setEditingService(service);
+                      focusManagementForm(serviceFormRef);
+                    },
                     onDelete: () =>
                       deleteRecord(
                         `/api/services/${service.id}`,
@@ -877,7 +1045,7 @@ function Management() {
                         );
                         setNotice(`“${service.name}” is available again.`);
                       } catch (requestError) {
-                        setError(requestError.message);
+                        console.error("Unable to restore service.", requestError);
                       } finally {
                         setLoading(false);
                       }
@@ -896,20 +1064,55 @@ function Management() {
                   key={editingImage?.id ?? "new-image"}
                   eyebrow="PORTFOLIO"
                   title={editingImage ? "Edit portfolio image" : "Add image to portfolio"}
-                  description="Add an image by URL. It will appear alongside the existing placeholder images."
+                  description="Upload an image and link it to a service. Service categories are shown with each portfolio item."
                   onSubmit={handleAddPortfolioImage}
                   loading={loading}
-                  submitLabel={editingImage ? "Save image" : "Add image"}
+                  submitLabel={editingImage ? "Replace image" : "Upload image"}
                 >
                   <ManagementField
-                    label="Image URL"
-                    name="imageUrl"
-                    type="url"
-                    placeholder="https://example.com/your-image.jpg"
+                    label={editingImage ? "Replacement image" : "Image"}
+                    name="image"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
                     required
-                    maxLength={2048}
-                    defaultValue={editingImage?.imageUrl ?? ""}
                   />
+                  <ManagementField
+                    label="Title"
+                    name="title"
+                    required
+                    maxLength={100}
+                    defaultValue={editingImage?.title ?? ""}
+                  />
+                  <ManagementField
+                    label="Description"
+                    name="description"
+                    as="textarea"
+                    maxLength={5000}
+                    defaultValue={editingImage?.description ?? ""}
+                  />
+                  <label className="management-field">
+                    <span>Linked service</span>
+                    <select
+                      name="serviceId"
+                      required
+                      defaultValue={editingImage?.serviceId ?? ""}
+                    >
+                      <option value="" disabled>
+                        Select a service
+                      </option>
+                      {services.map((service) => (
+                        <option key={service.id} value={service.id}>
+                          {service.categoryName} — {service.name}
+                          {!service.isActive ? " (inactive)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {services.length === 0 && (
+                    <p className="management-form-hint">
+                      Add a service before uploading portfolio images.
+                    </p>
+                  )}
                   <ManagementField
                     label="Alternative text"
                     name="altText"
@@ -931,8 +1134,8 @@ function Management() {
                   emptyMessage="No database images found."
                   items={portfolioImages.map((image) => ({
                     id: image.id,
-                    title: image.altText || "Portfolio image",
-                    detail: image.imageUrl,
+                    title: image.title,
+                    detail: `${image.categoryName} · ${image.serviceName}${image.description ? ` · ${image.description}` : ""}`,
                     onEdit: () => setEditingImage(image),
                     onDelete: () =>
                       deleteRecord(
@@ -952,11 +1155,6 @@ function Management() {
               </>
             )}
 
-            {error && (
-              <p className="management-error management-feedback" role="alert">
-                {error}
-              </p>
-            )}
             {notice && (
               <p className="management-notice" role="status">
                 {notice}
@@ -971,6 +1169,7 @@ function Management() {
 }
 
 function ManagementFormSection({
+  formRef,
   eyebrow,
   title,
   description,
@@ -984,7 +1183,11 @@ function ManagementFormSection({
       <p className="management-eyebrow">{eyebrow}</p>
       <h2>{title}</h2>
       <p className="management-form-description">{description}</p>
-      <form className="management-data-form" onSubmit={onSubmit}>
+      <form
+        ref={formRef}
+        className="management-data-form"
+        onSubmit={onSubmit}
+      >
         {children}
         <button className="btn btn-primary" type="submit" disabled={loading}>
           {loading ? "Saving..." : submitLabel}

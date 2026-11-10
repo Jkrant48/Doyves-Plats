@@ -4,6 +4,7 @@ import { pool } from '../config/database.js'
 import bookingRoutes from './routes/bookingRoutes.js'
 import serviceRoutes from './routes/serviceRoutes.js'
 import portfolioRoutes from './routes/portfolioRoutes.js'
+import reviewRoutes from './routes/reviewRoutes.js'
 import managementAuthRoutes from './routes/managementAuthRoutes.js'
 import { handleStripeWebhook } from './controllers/stripeWebhookController.js'
 
@@ -37,6 +38,7 @@ app.get('/api/health', async (_request, response) => {
 app.use('/api', serviceRoutes)
 app.use('/api', bookingRoutes)
 app.use('/api', portfolioRoutes)
+app.use('/api', reviewRoutes)
 app.use('/api', managementAuthRoutes)
 
 app.use((_request, response) => {
@@ -58,20 +60,23 @@ app.use((error, _request, response, next) => {
     '08000',
     '08003',
     '08006',
-  ].includes(error.code)
-  const status = isDatabaseConnectionError
+  ].includes(error.code) ||
+    error.message === 'Connection terminated unexpectedly'
+  const isServiceUnavailable = isDatabaseConnectionError || error.status === 503
+  const status = isServiceUnavailable
     ? 503
     : Number.isInteger(error.status) && error.status < 500
       ? error.status
       : 500
-
-  response.status(status).json({
-    error: isDatabaseConnectionError
-      ? 'The database is temporarily unavailable. Please try again shortly.'
+  const errorMessage = isDatabaseConnectionError
+    ? 'The database is temporarily unavailable. Please try again shortly.'
+    : status === 503
+      ? error.message
       : status === 500
         ? 'An unexpected server error occurred.'
-        : 'Invalid request.',
-  })
+        : 'Invalid request.'
+
+  response.status(status).json({ error: errorMessage })
 })
 
 const server = app.listen(port, () => {

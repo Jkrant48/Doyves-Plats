@@ -8,6 +8,7 @@
     "dev:server": "node --watch server/index.js",
     "start": "node server/index.js",
     "db:setup": "node scripts/setup-database.js",
+    "db:migrate:reviews": "node scripts/migrate-reviews.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
