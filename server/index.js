@@ -1,4 +1,6 @@
 import process from 'node:process'
+import { extname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import express from 'express'
 import { pool } from '../config/database.js'
 import bookingRoutes from './routes/bookingRoutes.js'
@@ -10,6 +12,7 @@ import managementAuthRoutes from './routes/managementAuthRoutes.js'
 import { handleStripeWebhook } from './controllers/stripeWebhookController.js'
 
 const port = Number(process.env.PORT || 3001)
+const frontendDirectory = fileURLToPath(new URL('../dist/', import.meta.url))
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error('PORT must be a valid port number between 1 and 65535.')
@@ -33,6 +36,26 @@ app.use('/api', bookingRoutes)
 app.use('/api', portfolioRoutes)
 app.use('/api', reviewRoutes)
 app.use('/api', managementAuthRoutes)
+
+app.use('/api', (_request, response) => {
+  response.status(404).json({ error: 'Route not found.' })
+})
+
+app.use(express.static(frontendDirectory))
+
+app.use((request, response, next) => {
+  if (
+    request.method !== 'GET' ||
+    request.path.startsWith('/api/') ||
+    extname(request.path)
+  ) {
+    return next()
+  }
+
+  response.sendFile(join(frontendDirectory, 'index.html'), (error) => {
+    if (error) next(error)
+  })
+})
 
 app.use((_request, response) => {
   response.status(404).json({ error: 'Route not found.' })
