@@ -2,6 +2,7 @@ import process from 'node:process'
 import express from 'express'
 import { pool } from '../config/database.js'
 import bookingRoutes from './routes/bookingRoutes.js'
+import { healthCheck } from './controllers/healthController.js'
 import serviceRoutes from './routes/serviceRoutes.js'
 import portfolioRoutes from './routes/portfolioRoutes.js'
 import reviewRoutes from './routes/reviewRoutes.js'
@@ -25,15 +26,7 @@ app.post(
 
 app.use(express.json({ limit: '16kb' }))
 
-app.get('/api/health', async (_request, response) => {
-  try {
-    await pool.query('SELECT 1')
-    response.json({ status: 'ok', database: 'connected' })
-  } catch (error) {
-    console.error('Database health check failed:', error)
-    response.status(503).json({ status: 'error', database: 'disconnected' })
-  }
-})
+app.get('/api/health', healthCheck)
 
 app.use('/api', serviceRoutes)
 app.use('/api', bookingRoutes)

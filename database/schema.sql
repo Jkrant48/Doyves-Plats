@@ -97,6 +97,13 @@ CREATE INDEX IF NOT EXISTS idx_appointments_datetime
 CREATE INDEX IF NOT EXISTS idx_appointments_status
   ON public.appointments (appointment_status);
 
+CREATE TABLE IF NOT EXISTS public.appointment_availability_overrides (
+  availability_date DATE PRIMARY KEY,
+  availability_type VARCHAR(20) NOT NULL,
+  CONSTRAINT appointment_availability_type_check
+    CHECK (availability_type IN ('full', 'morning', 'afternoon', 'closed'))
+);
+
 CREATE TABLE IF NOT EXISTS public.appointment_add_ons (
   appointment_id INT NOT NULL,
   service_id INT NOT NULL,

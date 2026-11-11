@@ -1,3 +1,4 @@
+import process from 'node:process'
 import { updateBookingPaymentStatus } from '../services/bookingService.js'
 import { getStripeClient } from '../services/stripeClient.js'
 

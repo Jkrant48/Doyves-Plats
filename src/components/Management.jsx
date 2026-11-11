@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { readApiJson } from "../utils/api.js";
+import DateCalendar from "./DateCalendar.jsx";
 
 const sections = [
   { id: "appointments", label: "View Appointments" },
+  { id: "availability", label: "Manage Availability" },
   { id: "category", label: "Add New Category" },
   { id: "service", label: "Add New Service" },
   { id: "portfolio", label: "Add Image to Portfolio" },
@@ -16,6 +18,13 @@ function formatDateTime(value) {
 
 function formatStatus(value) {
   return value.replaceAll("_", " ");
+}
+
+function getLocalDate() {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 10);
 }
 
 function focusManagementForm(formRef) {
@@ -44,6 +53,10 @@ function Management() {
   const [checkingRegistration, setCheckingRegistration] = useState(true);
   const [credential, setCredential] = useState("");
   const [appointments, setAppointments] = useState([]);
+  const [availabilityOverrides, setAvailabilityOverrides] = useState([]);
+  const [availabilityDate, setAvailabilityDate] = useState("");
+  const [availabilityMode, setAvailabilityMode] = useState("full");
+  const [availabilityError, setAvailabilityError] = useState("");
   const [categories, setCategories] = useState([]);
   const [services, setServices] = useState([]);
   const [portfolioImages, setPortfolioImages] = useState([]);
@@ -236,6 +249,20 @@ function Management() {
         await loadAppointments();
       } catch (requestError) {
         console.error("Unable to load management appointments.", requestError);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (section === "availability") {
+      setLoading(true);
+      setAvailabilityError("");
+      try {
+        const data = await managementRequest("/api/management/availability");
+        setAvailabilityOverrides(data.overrides);
+      } catch (requestError) {
+        setAvailabilityError(requestError.message);
+        console.error("Unable to load availability overrides.", requestError);
       } finally {
         setLoading(false);
       }
@@ -468,6 +495,53 @@ function Management() {
       setNotice(`Appointment #${appointment.id} marked ${status}.`);
     } catch (requestError) {
       console.error("Unable to update appointment.", requestError);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveAvailability(event) {
+    event.preventDefault();
+    setAvailabilityError("");
+    setNotice("");
+    setLoading(true);
+    try {
+      const data = await managementRequest("/api/management/availability", {
+        method: "PUT",
+        body: JSON.stringify({
+          date: availabilityDate,
+          mode: availabilityMode,
+        }),
+      });
+      setAvailabilityOverrides((existing) => [
+        ...existing.filter((item) => item.date !== availabilityDate),
+        data.override,
+      ].sort((first, second) => first.date.localeCompare(second.date)));
+      setNotice(`Availability updated for ${availabilityDate}.`);
+    } catch (requestError) {
+      setAvailabilityError(requestError.message);
+      console.error("Unable to update availability.", requestError);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function removeAvailabilityOverride(date) {
+    setAvailabilityError("");
+    setNotice("");
+    setLoading(true);
+    try {
+      await managementRequest(
+        `/api/management/availability/${encodeURIComponent(date)}`,
+        { method: "DELETE" },
+      );
+      setAvailabilityOverrides((existing) =>
+        existing.filter((item) => item.date !== date),
+      );
+      setNotice(`The normal weekly schedule has been restored for ${date}.`);
+    } catch (requestError) {
+      setAvailabilityError(requestError.message);
+      console.error("Unable to remove availability override.", requestError);
     } finally {
       setLoading(false);
     }
@@ -813,6 +887,100 @@ function Management() {
                   </div>
                 )}
               </>
+            )}
+
+            {selectedSection === "availability" && userRole === "Admin" && (
+              <section className="management-form-section">
+                <p className="management-eyebrow">BOOKING SCHEDULE</p>
+                <h2>Daily availability</h2>
+                <p className="management-form-description">
+                  Set a one-day override. Full day follows the usual hours, morning
+                  and afternoon offer the corresponding half-day slots, and closed
+                  blocks all bookings. Removing an override restores the weekly hours.
+                </p>
+                <form
+                  className="management-data-form"
+                  onSubmit={saveAvailability}
+                >
+                  <div className="management-field">
+                    <span>Select date</span>
+                    <DateCalendar
+                      selectedDate={availabilityDate}
+                      minDate={getLocalDate()}
+                      markedDates={availabilityOverrides.map((item) => item.date)}
+                      label="Select an override date"
+                      onSelect={(date) => setAvailabilityDate(date)}
+                    />
+                    {!availabilityDate && (
+                      <span className="management-form-hint">
+                        Choose a date to apply the selected availability.
+                      </span>
+                    )}
+                  </div>
+                  <label className="management-field">
+                    <span>Availability</span>
+                    <select
+                      value={availabilityMode}
+                      onChange={(event) => setAvailabilityMode(event.target.value)}
+                    >
+                      <option value="full">Full day</option>
+                      <option value="morning">Morning only</option>
+                      <option value="afternoon">Afternoon only</option>
+                      <option value="closed">Not available</option>
+                    </select>
+                  </label>
+                  <button
+                    className="btn btn-primary"
+                    type="submit"
+                    disabled={loading || !availabilityDate}
+                  >
+                    {loading ? "Saving..." : "Save override"}
+                  </button>
+                </form>
+                {availabilityError && (
+                  <p className="management-error" role="alert">
+                    {availabilityError}
+                  </p>
+                )}
+                <div className="management-record-list">
+                  <h3>Upcoming overrides</h3>
+                  {loading && availabilityOverrides.length === 0 ? (
+                    <p className="management-empty" role="status">
+                      Loading availability overrides...
+                    </p>
+                  ) : availabilityOverrides.length === 0 ? (
+                    <p className="management-empty" role="status">
+                      No date-specific overrides are set.
+                    </p>
+                  ) : (
+                    <ul>
+                      {availabilityOverrides.map((override) => (
+                        <li className="management-record" key={override.date}>
+                          <div className="management-record-details">
+                            <strong>{override.date}</strong>
+                            <span>
+                              {{
+                                full: "Full day",
+                                morning: "Morning only",
+                                afternoon: "Afternoon only",
+                                closed: "Not available",
+                              }[override.mode]}
+                            </span>
+                          </div>
+                          <button
+                            className="management-cancel-edit"
+                            type="button"
+                            disabled={loading}
+                            onClick={() => removeAvailabilityOverride(override.date)}
+                          >
+                            Restore default
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </section>
             )}
 
             {selectedSection === "reviews" && (

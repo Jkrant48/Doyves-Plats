@@ -15,7 +15,7 @@ organized into routes, controllers, and database service modules under `server/`
    `node -p "require('node:crypto').randomBytes(32).toString('hex')"` twice,
    once for each secret, and keep both values only in your local `.env` file.
 3. Use the Supabase project's PostgreSQL connection string for `SUPABASE_DB_URL`. `DATABASE_URL` remains supported as a fallback for local PostgreSQL.
-4. Run `npm run db:setup` to create or migrate the `users`, `category`, `services`, `appointments`, `portfolio_images`, and `reviews` tables, and add the `Admin` and `Employee` account roles. Rerun it after schema updates so existing databases receive migrations such as the review-to-appointment link. Existing `Management` accounts are migrated to `Admin`. Setup does not add users, categories, or services. With an empty `users` table, visit `/#manage` and use the one-time setup option with `ADMIN_API_KEY` to create the first Admin account; that Admin can create Employee accounts and add categories or services later.
+4. Run `npm run db:setup` to create or migrate the `users`, `category`, `services`, `appointments`, `appointment_availability_overrides`, `portfolio_images`, and `reviews` tables, and add the `Admin` and `Employee` account roles. Rerun it after schema updates so existing databases receive migrations such as the review-to-appointment link. Existing `Management` accounts are migrated to `Admin`. Setup does not add users, categories, or services. With an empty `users` table, visit `/#manage` and use the one-time setup option with `ADMIN_API_KEY` to create the first Admin account; that Admin can create Employee accounts and add categories or services later.
    If only the review-to-appointment link is missing, run `npm run db:migrate:reviews` to apply that migration without changing other tables.
 5. In one terminal, run `npm run dev:server` to start the API on port 3001.
 6. In another terminal, run `npm run dev` to start the Vite frontend. Requests to `/api` are proxied to the API.
@@ -72,8 +72,9 @@ an arbitrary service just to satisfy the constraint.
 
 The API exposes `GET /api/health` for database connectivity, `GET /api/categories`
 for service categories, `GET /api/categories/:categoryId/services` for category
-details, `GET /api/services` for bookable services, and `POST /api/bookings` to
-create a pending booking and Stripe Checkout session. The appointment is confirmed
+details, `GET /api/services` for bookable services, `GET /api/bookings/availability?date=YYYY-MM-DD`
+for currently open time slots, and `POST /api/bookings` to create a pending
+booking and Stripe Checkout session. The appointment is confirmed
 after a valid signed `POST /api/stripe/webhook` event or when the payment-status
 endpoint independently verifies the Checkout session with Stripe.
 The form redirects customers to pay a fixed €10.00 deposit through Stripe-hosted
@@ -86,6 +87,18 @@ Checkout. Configure the Stripe webhook endpoint URL as
 Checkout redirect; the secret key stays on the API server.
 After a successful payment confirmation, the customer is shown an appointment
 summary with the appointment number, service, date and time, and payment status.
+
+Booking availability defaults to Monday–Friday, 08:00–18:00; Saturday,
+09:00–17:00; and Sunday closed. Appointment start times are offered every two
+hours, and a maximum of four pending-payment or active appointments may be
+booked per date. Sundays are unavailable in the booking calendar and remain
+closed regardless of availability overrides. Admins can add a date-specific
+full-day, morning-only, afternoon-only, or closed override in the management
+calendar; removing an override restores the normal weekly schedule.
+Overrides are managed through the admin-only `GET`, `PUT`, and `DELETE`
+`/api/management/availability` endpoints. Booking creation rechecks the schedule
+and daily capacity transactionally so simultaneous requests cannot exceed the
+four-appointment limit.
 
 Clicking a category on the services section opens its database-backed services in
 a dialog. The booking form loads its service options from the database and adds

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { readApiJson } from "../utils/api.js";
+import DateCalendar from "./DateCalendar.jsx";
 
 function getLocalDate() {
   const now = new Date();
@@ -19,8 +20,12 @@ function Booking({ selectedServiceId, onServiceChange }) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [appointmentConfirmation, setAppointmentConfirmation] = useState(null);
-  const dateInputRef = useRef(null);
-  const timeInputRef = useRef(null);
+  const [appointmentDate, setAppointmentDate] = useState("");
+  const [appointmentTime, setAppointmentTime] = useState("");
+  const [dateAvailability, setDateAvailability] = useState(null);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState("");
+  const [availabilityRefresh, setAvailabilityRefresh] = useState(0);
   const confirmationDialogRef = useRef(null);
   const checkoutReturnRef = useRef(null);
   if (checkoutReturnRef.current === null) {
@@ -36,19 +41,6 @@ function Booking({ selectedServiceId, onServiceChange }) {
     if (appointmentConfirmation && dialog && !dialog.open) dialog.showModal();
   }, [appointmentConfirmation]);
 
-  function openPicker(inputRef) {
-    const input = inputRef.current;
-    if (!input) return;
-
-    if (typeof input.showPicker === "function") {
-      input.showPicker();
-      return;
-    }
-
-    input.focus();
-    input.click();
-  }
-
   useEffect(() => {
     fetch("/api/services")
       .then((response) => readApiJson(response, "Unable to load services."))
@@ -57,6 +49,35 @@ function Booking({ selectedServiceId, onServiceChange }) {
       .catch((error) => console.error("Unable to load services.", error))
       .finally(() => setLoadingServices(false));
   }, []);
+
+  useEffect(() => {
+    if (!appointmentDate) {
+      return undefined;
+    }
+
+    let active = true;
+    fetch(`/api/bookings/availability?date=${encodeURIComponent(appointmentDate)}`)
+      .then((response) =>
+        readApiJson(response, "Unable to load appointment availability."),
+      )
+      .then((data) => {
+        if (active) setDateAvailability(data);
+      })
+      .catch((error) => {
+        if (active) {
+          setDateAvailability(null);
+          setAvailabilityError("Unable to load availability. Please try again.");
+          console.error("Unable to load appointment availability.", error);
+        }
+      })
+      .finally(() => {
+        if (active) setAvailabilityLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [appointmentDate, availabilityRefresh]);
 
   // Stripe returns here after checkout; the webhook remains the source of truth.
   useEffect(() => {
@@ -120,6 +141,10 @@ function Booking({ selectedServiceId, onServiceChange }) {
   async function handleSubmit(event) {
     event.preventDefault();
     setBookingMessage("");
+    if (!appointmentDate) {
+      setBookingMessage("Please select an appointment date.");
+      return;
+    }
     setSubmitting(true);
 
     const form = event.currentTarget;
@@ -129,23 +154,30 @@ function Booking({ selectedServiceId, onServiceChange }) {
       email: formData.get("email"),
       phone: formData.get("phone"),
       serviceId: Number(formData.get("serviceId")),
-      appointmentDate: formData.get("appointmentDate"),
-      appointmentTime: formData.get("appointmentTime"),
+      appointmentDate,
+      appointmentTime,
     };
 
+    let availabilityConflict = false;
     try {
       const response = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(booking),
       });
+      availabilityConflict = response.status === 409;
       const data = await readApiJson(response, "Unable to submit your booking.");
 
       // Redirect to Stripe-hosted Checkout; the webhook confirms the appointment.
       window.location.assign(data.checkoutUrl);
     } catch (error) {
       console.error("Unable to submit your booking.", error);
-      setBookingMessage("");
+      setBookingMessage(error.message || "Unable to submit your booking.");
+      if (availabilityConflict) {
+        setAvailabilityLoading(true);
+        setAvailabilityRefresh((current) => current + 1);
+        setAppointmentTime("");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -160,7 +192,8 @@ function Booking({ selectedServiceId, onServiceChange }) {
           <h2 className="section-title1">Appointment</h2>
           <p className="section-description">
             Schedule your next visit and let us tailor a look that reflects your
-            personality. We&apos;ll confirm your appointment shortly.
+            personality. Choose from available two-hour time slots; up to four
+            appointments can be booked each day.
           </p>
         </div>
         <form className="booking-form" onSubmit={handleSubmit}>
@@ -227,72 +260,61 @@ function Booking({ selectedServiceId, onServiceChange }) {
             </select>
           </div>
           <div className="form-group">
-            <label htmlFor="appointmentDate">SELECT AN AVAILABLE DATE</label>
-            <div className="booking-picker">
-              <input
-                ref={dateInputRef}
-                type="date"
-                id="appointmentDate"
-                name="appointmentDate"
-                min={getLocalDate()}
-                required
-              />
-              <button
-                className="booking-picker-button"
-                type="button"
-                aria-label="Choose appointment date"
-                onClick={() => openPicker(dateInputRef)}
-              >
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  width="20"
-                  height="20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="5" width="18" height="16" rx="2" />
-                  <path d="M16 3v4M8 3v4M3 10h18" />
-                </svg>
-              </button>
-            </div>
+            <label>SELECT AN AVAILABLE DATE</label>
+            <DateCalendar
+              selectedDate={appointmentDate}
+              minDate={getLocalDate()}
+              label="Select an appointment date"
+              onSelect={(date) => {
+                setAppointmentDate(date);
+                setAppointmentTime("");
+                setDateAvailability(null);
+                setAvailabilityLoading(Boolean(date));
+                setAvailabilityError("");
+                setBookingMessage("");
+              }}
+            />
           </div>
           <div className="form-group">
             <label htmlFor="appointmentTime">PREFERRED TIME</label>
-            <div className="booking-picker">
-              <input
-                ref={timeInputRef}
-                type="time"
-                id="appointmentTime"
-                name="appointmentTime"
-                required
-              />
-              <button
-                className="booking-picker-button"
-                type="button"
-                aria-label="Choose appointment time"
-                onClick={() => openPicker(timeInputRef)}
-              >
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  width="20"
-                  height="20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 7v5l3 2" />
-                </svg>
-              </button>
-            </div>
+            <select
+              id="appointmentTime"
+              name="appointmentTime"
+              value={appointmentTime}
+              onChange={(event) => {
+                setAppointmentTime(event.target.value);
+                setBookingMessage("");
+              }}
+              required
+              disabled={!dateAvailability?.slots.length || availabilityLoading}
+            >
+              <option value="" disabled>
+                {availabilityLoading
+                  ? "Loading available times..."
+                  : "Select an available time"}
+              </option>
+              {(dateAvailability?.slots ?? []).map((time) => (
+                <option key={time} value={time}>
+                  {new Date(`2000-01-01T${time}:00`).toLocaleTimeString([], {
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </option>
+              ))}
+            </select>
           </div>
+          {availabilityError && (
+            <p className="booking-message" role="alert">
+              {availabilityError}
+            </p>
+          )}
+          {appointmentDate && !availabilityLoading && !availabilityError && (
+            <p className="booking-message" role="status">
+              {dateAvailability?.slots.length
+                ? `${dateAvailability.remainingAppointments} appointment${dateAvailability.remainingAppointments === 1 ? "" : "s"} available on this date.`
+                : "No appointments are available on this date."}
+            </p>
+          )}
           {loadingServices && (
             <p className="booking-message" role="status">
               Loading available services...

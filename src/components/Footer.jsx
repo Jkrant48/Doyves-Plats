@@ -1,5 +1,4 @@
 //footer component--contains social media links and copyright information
-import React from "react";
 
 function Footer() {
   return (

@@ -1,10 +1,14 @@
 import process from 'node:process'
 import {
   createPendingBooking,
+  deleteAvailabilityOverride,
+  findAvailabilityOverrides,
+  findDailyAvailability,
   findAllAppointments,
   findPaymentStatus,
   markBookingCheckoutFailed,
   saveCheckoutSessionId,
+  saveAvailabilityOverride,
   setAppointmentOutcome,
   updateBookingPaymentStatus,
 } from '../services/bookingService.js'
@@ -61,15 +65,23 @@ export async function createBooking(request, response) {
   }
 
   const stripe = getStripeClient()
-  const booking = await createPendingBooking({
-    name: name.trim(),
-    email: email.trim(),
-    phone: phone.trim(),
-    serviceId,
-    appointmentDate,
-    appointmentTime,
-    depositAmount: paymentAmountCents / 100,
-  })
+  let booking
+  try {
+    booking = await createPendingBooking({
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      serviceId,
+      appointmentDate,
+      appointmentTime,
+      depositAmount: paymentAmountCents / 100,
+    })
+  } catch (error) {
+    if (error.code === 'BOOKING_UNAVAILABLE') {
+      return response.status(409).json({ error: error.message })
+    }
+    throw error
+  }
 
   if (!booking) {
     return response.status(400).json({ error: 'The selected service is unavailable.' })
@@ -111,6 +123,46 @@ export async function createBooking(request, response) {
     booking,
     checkoutUrl: session.url,
   })
+}
+
+export async function getBookingAvailability(request, response) {
+  const { date } = request.query
+  if (typeof date !== 'string' || !isValidDate(date)) {
+    return response.status(400).json({ error: 'Provide a valid appointment date.' })
+  }
+  return response.json(await findDailyAvailability(date))
+}
+
+export async function getManagedAvailability(_request, response) {
+  return response.json({ overrides: await findAvailabilityOverrides() })
+}
+
+export async function updateManagedAvailability(request, response) {
+  const { date, mode } = request.body ?? {}
+  if (
+    typeof date !== 'string' ||
+    !isValidDate(date) ||
+    new Date(`${date}T00:00:00.000Z`).getUTCDay() === 0 ||
+    !['full', 'morning', 'afternoon', 'closed'].includes(mode)
+  ) {
+    return response.status(400).json({
+      error: 'Choose a non-Sunday date and availability of full, morning, afternoon, or closed.',
+    })
+  }
+  const override = await saveAvailabilityOverride(date, mode)
+  return response.json({ override })
+}
+
+export async function deleteManagedAvailability(request, response) {
+  const { date } = request.params
+  if (!isValidDate(date)) {
+    return response.status(400).json({ error: 'Provide a valid appointment date.' })
+  }
+  const deleted = await deleteAvailabilityOverride(date)
+  if (!deleted) {
+    return response.status(404).json({ error: 'No availability override exists for this date.' })
+  }
+  return response.json({ deleted: true })
 }
 
 export async function getBookingPaymentStatus(request, response) {

@@ -1,6 +1,6 @@
 import { pool } from "../config/database.js";
 
-app.get("/api/health", async (_request, response) => {
+export async function healthCheck(_request, response) {
   try {
     await pool.query("SELECT 1");
     response.json({ status: "ok", database: "connected" });
@@ -8,4 +8,4 @@ app.get("/api/health", async (_request, response) => {
     console.error("Database health check failed:", error);
     response.status(503).json({ status: "error", database: "disconnected" });
   }
-});
+}
